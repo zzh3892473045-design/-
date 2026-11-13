@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "workspace-client",
+	"version": "${version}",
+	"name": "Workspace Client",
+	"description": "A from-scratch Fabric client scaffold. Not a Mio or Zio redistribution.",
+	"authors": ["zzh3892473045-design"],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.workspace.client.WorkspaceClient"
+		]
+	},
+	"mixins": [
+		"workspace-client.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
