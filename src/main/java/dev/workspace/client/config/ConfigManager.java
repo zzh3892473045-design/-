@@ -58,7 +58,7 @@ public final class ConfigManager {
 			}
 			apply(rootElement.getAsJsonObject());
 			WorkspaceClient.LOGGER.info("Loaded config from {}", path);
-		} catch (IOException | JsonSyntaxException | RuntimeException exception) {
+		} catch (IOException | RuntimeException exception) {
 			WorkspaceClient.LOGGER.warn("Config {} is corrupt or unreadable; using defaults", path, exception);
 		}
 		this.dirtyTicks = -1;

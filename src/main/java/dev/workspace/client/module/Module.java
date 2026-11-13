@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 
 import dev.workspace.client.WorkspaceClient;
 import dev.workspace.client.event.EventSubscription;
+import dev.workspace.client.event.ModuleToggleEvent;
 import dev.workspace.client.setting.Setting;
 
 /**
@@ -73,6 +74,7 @@ public abstract class Module {
 		WorkspaceClient client = WorkspaceClient.getInstance();
 		if (client != null) {
 			client.configManager().markDirty();
+			client.keybindManager().onModuleKeyChanged(this, next);
 		}
 	}
 
@@ -99,11 +101,14 @@ public abstract class Module {
 				detachListeners();
 			}
 		}
+		WorkspaceClient client = WorkspaceClient.getInstance();
 		if (persist) {
-			WorkspaceClient client = WorkspaceClient.getInstance();
 			if (client != null) {
 				client.configManager().markDirty();
 			}
+		}
+		if (client != null) {
+			client.eventBus().post(new ModuleToggleEvent(this, enabled, persist));
 		}
 	}
 

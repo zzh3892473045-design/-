@@ -15,7 +15,9 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Abilities;
 import net.minecraft.world.food.FoodData;
 
+import dev.workspace.client.WorkspaceClient;
 import dev.workspace.client.gui.ClickGuiScreen;
+import dev.workspace.client.module.impl.ToggleSneakModule;
 
 /**
  * Isolates Minecraft / Fabric calls that sit next to official 1.21.11 names.
@@ -29,9 +31,9 @@ import dev.workspace.client.gui.ClickGuiScreen;
  *       the long-standing official names; they were not re-opened as source.</li>
  *   <li>{@link LocalPlayer} food / crouch / abilities methods below are the
  *       official names that have been stable across recent 1.21 releases.</li>
- *   <li>Keyboard state uses {@link GLFW#glfwGetCurrentContext()} plus
- *       {@link InputConstants#isKeyDown(long, int)} so we do not depend on
- *       {@code Window.handle()} vs {@code getHandle()}.</li>
+ *   <li>Keyboard state uses {@link Minecraft#getWindow()} plus
+ *       {@link InputConstants#isKeyDown(com.mojang.blaze3d.platform.Window, int)}
+ *       (official 1.21.11; the old {@code isKeyDown(long, int)} overload is gone).</li>
  * </ul>
  */
 public final class ClientAdapters {
@@ -59,8 +61,12 @@ public final class ClientAdapters {
 		if (glfwKey <= 0) {
 			return false;
 		}
-		long window = GLFW.glfwGetCurrentContext();
-		if (window == 0L) {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null) {
+			return false;
+		}
+		var window = client.getWindow();
+		if (window == null) {
 			return false;
 		}
 		return InputConstants.isKeyDown(window, glfwKey);
@@ -122,5 +128,34 @@ public final class ClientAdapters {
 				yield "Key" + glfwKey;
 			}
 		};
+	}
+
+	/**
+	 * Whether ToggleSneak should rewrite {@code KeyboardInput} so vanilla
+	 * treats sneak as held this tick. False when the module is off, when
+	 * HOLD mode has a bound key that is not down, or when the player is
+	 * riding ({@code getVehicle() != null}) so we never force a dismount.
+	 * An unbound HOLD key ({@code keyCode() <= 0}) is treated as allowed,
+	 * matching {@code SprintModule}.
+	 */
+	public static boolean shouldForceVanillaSneak(LocalPlayer player) {
+		if (player == null || player.getVehicle() != null) {
+			return false;
+		}
+		WorkspaceClient workspace = WorkspaceClient.getInstance();
+		if (workspace == null) {
+			return false;
+		}
+		ToggleSneakModule module = workspace.moduleManager().of(ToggleSneakModule.class);
+		if (module == null || !module.isEnabled()) {
+			return false;
+		}
+		if (module.mode() == ToggleSneakModule.Mode.HOLD) {
+			int key = module.keyCode();
+			if (key > 0 && !isKeyDown(key)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

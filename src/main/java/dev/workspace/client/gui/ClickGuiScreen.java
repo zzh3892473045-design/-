@@ -12,6 +12,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import dev.workspace.client.WorkspaceClient;
+import dev.workspace.client.adapter.ClientAdapters;
 import dev.workspace.client.module.Category;
 import dev.workspace.client.module.Module;
 import dev.workspace.client.module.impl.ClickGuiModule;
@@ -79,7 +80,7 @@ public final class ClickGuiScreen extends Screen {
 		}
 		String hint = capturingModule != null
 			? "Press a key to bind, or Esc to clear"
-			: "Esc or Right Shift to close  ·  left click toggles  ·  right click opens settings";
+			: closeHint();
 		int hintX = Math.max(20, (this.width - this.font.width(hint)) / 2);
 		graphics.drawString(this.font, hint, hintX, this.height - 14, ClickGuiTheme.HINT, false);
 	}
@@ -169,14 +170,25 @@ public final class ClickGuiScreen extends Screen {
 	}
 
 	private static boolean isCloseKey(int key) {
-		if (key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
-			return true;
+		ClickGuiModule module = clickGuiModule();
+		return module != null && module.keyCode() > 0 && module.keyCode() == key;
+	}
+
+	private static String closeHint() {
+		ClickGuiModule module = clickGuiModule();
+		int key = module != null ? module.keyCode() : 0;
+		if (key <= 0) {
+			return "Esc to close  ·  left click toggles  ·  right click opens settings";
 		}
+		return "Esc or " + ClientAdapters.keyDisplayName(key)
+			+ " to close  ·  left click toggles  ·  right click opens settings";
+	}
+
+	private static ClickGuiModule clickGuiModule() {
 		WorkspaceClient workspace = WorkspaceClient.getInstance();
 		if (workspace == null) {
-			return false;
+			return null;
 		}
-		ClickGuiModule module = workspace.moduleManager().of(ClickGuiModule.class);
-		return module != null && module.keyCode() > 0 && module.keyCode() == key;
+		return workspace.moduleManager().of(ClickGuiModule.class);
 	}
 }

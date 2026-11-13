@@ -8,11 +8,14 @@ import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 
+import dev.workspace.client.module.impl.AutoRespawnModule;
 import dev.workspace.client.module.impl.ClickGuiModule;
 import dev.workspace.client.module.impl.CrosshairModule;
 import dev.workspace.client.module.impl.FullbrightModule;
 import dev.workspace.client.module.impl.HudModule;
+import dev.workspace.client.module.impl.NotificationsModule;
 import dev.workspace.client.module.impl.SprintModule;
+import dev.workspace.client.module.impl.ToggleSneakModule;
 import dev.workspace.client.module.impl.ZoomModule;
 
 public final class ModuleManager {
@@ -24,8 +27,11 @@ public final class ModuleManager {
 		register(new HudModule());
 		register(new FullbrightModule());
 		register(new SprintModule());
+		register(new ToggleSneakModule());
 		register(new ZoomModule());
 		register(new CrosshairModule());
+		register(new NotificationsModule());
+		register(new AutoRespawnModule());
 	}
 
 	public void register(Module module) {
@@ -74,12 +80,23 @@ public final class ModuleManager {
 		}
 	}
 
+	/**
+	 * Display filter for the HUD module list only. Does not change module logic.
+	 * HUD and ClickGUI are excluded; Hold Zoom appears only while it is actually zooming.
+	 */
 	public List<Module> enabledVisibleInHud() {
 		List<Module> enabled = new ArrayList<>();
 		for (Module module : this.modules) {
-			if (module.isEnabled() && !(module instanceof ClickGuiModule)) {
-				enabled.add(module);
+			if (!module.isEnabled()) {
+				continue;
 			}
+			if (module instanceof ClickGuiModule || module instanceof HudModule) {
+				continue;
+			}
+			if (module instanceof ZoomModule && !ZoomModule.isEffectivelyZooming()) {
+				continue;
+			}
+			enabled.add(module);
 		}
 		enabled.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
 		return enabled;

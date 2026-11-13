@@ -1,4 +1,6 @@
 {
 	"key.category.workspace-client.main": "Workspace Client",
-	"key.workspace-client.clickgui": "Open ClickGUI"
+	"key.workspace-client.clickgui": "Open ClickGUI",
+	"workspace-client.notifications.on": "On",
+	"workspace-client.notifications.off": "Off"
 }

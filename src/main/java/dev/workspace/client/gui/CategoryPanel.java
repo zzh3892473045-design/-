@@ -160,10 +160,12 @@ public final class CategoryPanel {
 			} else if (setting instanceof EnumSetting<?> enumSetting) {
 				graphics.drawString(font, setting.displayName() + ": " + prettyEnum(enumSetting.get().name()), this.x + 8, rowY + 3, ClickGuiTheme.TEXT, false);
 			} else if (setting instanceof ColorSetting colorSetting) {
-				graphics.drawString(font, setting.displayName(), this.x + 8, rowY + 2, colorSetting.argb(), false);
+				graphics.drawString(font, setting.displayName(), this.x + 8, rowY + 2, ClickGuiTheme.TEXT, false);
+				drawColorSwatch(graphics, rowY + 2, colorSetting);
 				drawColorChannel(graphics, rowY + 11, 0, colorSetting.red() / 255.0);
 				drawColorChannel(graphics, rowY + 21, 1, colorSetting.green() / 255.0);
 				drawColorChannel(graphics, rowY + 31, 2, colorSetting.blue() / 255.0);
+				drawColorChannel(graphics, rowY + 41, 3, colorSetting.alpha() / 255.0);
 			} else {
 				graphics.drawString(font, setting.displayName(), this.x + 8, rowY + 3, ClickGuiTheme.TEXT, false);
 			}
@@ -191,11 +193,23 @@ public final class CategoryPanel {
 		graphics.fill(left, y, Math.max(left, fill), y + 3, ClickGuiTheme.ACCENT);
 	}
 
+	private void drawColorSwatch(GuiGraphics graphics, int y, ColorSetting colorSetting) {
+		int size = 8;
+		int left = this.x + ClickGuiTheme.PANEL_WIDTH - 8 - size;
+		int right = left + size;
+		int bottom = y + size;
+		graphics.fill(left - 1, y - 1, right + 1, bottom + 1, ClickGuiTheme.BORDER);
+		int opaque = 0xFF000000 | (colorSetting.argb() & 0x00FFFFFF);
+		int mid = left + size / 2;
+		graphics.fill(left, y, mid, bottom, opaque);
+		graphics.fill(mid, y, right, bottom, colorSetting.argb());
+	}
+
 	private void drawColorChannel(GuiGraphics graphics, int y, int channel, double ratio) {
 		int left = this.x + 8;
 		int right = this.x + ClickGuiTheme.PANEL_WIDTH - 8;
 		int fill = left + (int) Math.round((right - left) * Math.max(0.0, Math.min(1.0, ratio)));
-		int color = channel == 0 ? 0xFFCC5555 : channel == 1 ? 0xFF55AA70 : 0xFF5577CC;
+		int color = channel == 0 ? 0xFFCC5555 : channel == 1 ? 0xFF55AA70 : channel == 2 ? 0xFF5577CC : ClickGuiTheme.TEXT_MUTED;
 		graphics.fill(left, y, right, y + 3, ClickGuiTheme.SLIDER_TRACK);
 		graphics.fill(left, y, Math.max(left, fill), y + 3, color);
 	}
@@ -259,6 +273,9 @@ public final class CategoryPanel {
 		}
 		if (mouseY >= rowY + 30 && mouseY < rowY + 39) {
 			return 2;
+		}
+		if (mouseY >= rowY + 40 && mouseY < rowY + 49) {
+			return 3;
 		}
 		return -1;
 	}

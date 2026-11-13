@@ -26,7 +26,7 @@ public final class ClickGuiTheme {
 	public static final int HEADER_HEIGHT = 16;
 	public static final int ROW_HEIGHT = 14;
 	public static final int SETTING_HEIGHT = 14;
-	public static final int COLOR_HEIGHT = 42;
+	public static final int COLOR_HEIGHT = 52;
 	public static final int PANEL_GAP = 8;
 
 	private ClickGuiTheme() {

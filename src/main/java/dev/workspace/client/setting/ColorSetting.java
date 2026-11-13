@@ -54,26 +54,24 @@ public final class ColorSetting extends Setting<Integer> {
 	}
 
 	public void setRgb(int red, int green, int blue) {
-		int a = alpha();
-		if (a == 0) {
-			a = 0xFF;
-		}
-		set((a << 24) | (clamp8(red) << 16) | (clamp8(green) << 8) | clamp8(blue));
+		set((alpha() << 24) | (clamp8(red) << 16) | (clamp8(green) << 8) | clamp8(blue));
+	}
+
+	public void setAlpha(int alpha) {
+		set((clamp8(alpha) << 24) | (red() << 16) | (green() << 8) | blue());
 	}
 
 	public void setChannel(int channel, int amount) {
-		int r = red();
-		int g = green();
-		int b = blue();
 		int v = clamp8(amount);
 		if (channel == 0) {
-			r = v;
+			setRgb(v, green(), blue());
 		} else if (channel == 1) {
-			g = v;
-		} else {
-			b = v;
+			setRgb(red(), v, blue());
+		} else if (channel == 2) {
+			setRgb(red(), green(), v);
+		} else if (channel == 3) {
+			setAlpha(v);
 		}
-		setRgb(r, g, b);
 	}
 
 	private static int clamp8(int value) {

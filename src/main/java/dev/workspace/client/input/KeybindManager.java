@@ -27,6 +27,7 @@ public final class KeybindManager {
 
 	private KeyMapping clickGuiMapping;
 	private final boolean[] wasDown = new boolean[GLFW.GLFW_KEY_LAST + 1];
+	private boolean appliedMappingAfterOptions;
 
 	public void register() {
 		KeyMapping.Category category = KeyMapping.Category.register(
@@ -38,6 +39,13 @@ public final class KeybindManager {
 			DEFAULT_CLICK_GUI_KEY,
 			category
 		));
+		WorkspaceClient workspace = WorkspaceClient.getInstance();
+		if (workspace != null) {
+			ClickGuiModule module = workspace.moduleManager().of(ClickGuiModule.class);
+			if (module != null) {
+				syncClickGuiMapping(module.keyCode());
+			}
+		}
 	}
 
 	public KeyMapping clickGuiMapping() {
@@ -48,6 +56,20 @@ public final class KeybindManager {
 		if (client == null || ClientAdapters.isTextInputFocused(client)) {
 			clearWasDown();
 			return;
+		}
+		// Options may overwrite the Fabric mapping after config load; push once,
+		// then follow later changes made in the vanilla controls menu.
+		if (!this.appliedMappingAfterOptions) {
+			WorkspaceClient workspace = WorkspaceClient.getInstance();
+			if (workspace != null) {
+				ClickGuiModule module = workspace.moduleManager().of(ClickGuiModule.class);
+				if (module != null) {
+					syncClickGuiMapping(module.keyCode());
+				}
+			}
+			this.appliedMappingAfterOptions = true;
+		} else {
+			pullClickGuiMappingIntoModule();
 		}
 		boolean screenIsClickGui = client.screen instanceof ClickGuiScreen;
 		boolean handledClickGui = false;
@@ -103,6 +125,74 @@ public final class KeybindManager {
 		}
 		Screen parent = client.screen;
 		client.setScreen(new ClickGuiScreen(parent));
+	}
+
+	/**
+	 * Keeps the Fabric {@link KeyMapping} in the vanilla controls menu in
+	 * lockstep with {@link ClickGuiModule#keyCode()}.
+	 */
+	public void onModuleKeyChanged(Module module, int keyCode) {
+		if (module instanceof ClickGuiModule) {
+			syncClickGuiMapping(keyCode);
+		}
+	}
+
+	public void syncClickGuiMapping(int glfwKey) {
+		if (this.clickGuiMapping == null) {
+			return;
+		}
+		InputConstants.Key next = glfwKey <= 0
+			? InputConstants.UNKNOWN
+			: InputConstants.Type.KEYSYM.getOrCreate(glfwKey);
+		if (next.equals(boundKey(this.clickGuiMapping))) {
+			return;
+		}
+		this.clickGuiMapping.setKey(next);
+		KeyMapping.resetMapping();
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.options != null) {
+			client.options.save();
+		}
+	}
+
+	private void pullClickGuiMappingIntoModule() {
+		if (this.clickGuiMapping == null) {
+			return;
+		}
+		WorkspaceClient workspace = WorkspaceClient.getInstance();
+		if (workspace == null) {
+			return;
+		}
+		ClickGuiModule module = workspace.moduleManager().of(ClickGuiModule.class);
+		if (module == null) {
+			return;
+		}
+		InputConstants.Key bound = boundKey(this.clickGuiMapping);
+		if (bound.getType() == InputConstants.Type.MOUSE) {
+			return;
+		}
+		int mapped = glfwKeyOf(bound);
+		if (mapped != module.keyCode()) {
+			module.setKeyCode(mapped);
+		}
+	}
+
+	private static int glfwKeyOf(InputConstants.Key key) {
+		if (key == null || key.equals(InputConstants.UNKNOWN) || key.getType() != InputConstants.Type.KEYSYM) {
+			return 0;
+		}
+		return key.getValue();
+	}
+
+	private static InputConstants.Key boundKey(KeyMapping mapping) {
+		if (mapping == null || mapping.isUnbound()) {
+			return InputConstants.UNKNOWN;
+		}
+		try {
+			return InputConstants.getKey(mapping.saveString());
+		} catch (RuntimeException ignored) {
+			return InputConstants.UNKNOWN;
+		}
 	}
 
 	private void clearWasDown() {
