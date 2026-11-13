@@ -13,11 +13,19 @@ repositories {
 	mavenCentral()
 }
 
+configurations {
+	proguardCli
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${minecraft_version}"
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+	// Used only by the optional obfJar task. The default `build` task does not
+	// resolve or run ProGuard.
+	proguardCli 'com.guardsquare:proguard-base:7.7.0'
 }
 
 loom {
@@ -48,4 +56,50 @@ java {
 tasks.withType(JavaCompile).configureEach {
 	options.release = 21
 	options.encoding = 'UTF-8'
+}
+
+// Second artifact: obfuscates only dev.workspace.client.** in the remapped jar.
+// Not attached to `build` / `assemble`, so a ProGuard or network failure cannot
+// block the clean jar. Run explicitly: ./gradlew obfJar
+def obfJarFile = layout.buildDirectory.file("libs/${project.archives_base_name}-${project.version}-obf.jar")
+
+tasks.register('obfJar', JavaExec) {
+	group = 'build'
+	description = 'Obfuscate only dev.workspace.client.** into workspace-client-<version>-obf.jar'
+	dependsOn tasks.named('remapJar')
+	classpath = configurations.proguardCli
+	mainClass = 'proguard.ProGuard'
+
+	def inJar = tasks.named('remapJar').flatMap { it.archiveFile }
+	def confFile = layout.projectDirectory.file('proguard.conf')
+	inputs.files(inJar, confFile)
+	outputs.file(obfJarFile)
+
+	doFirst {
+		def destination = obfJarFile.get().asFile
+		destination.parentFile.mkdirs()
+		if (destination.exists()) {
+			destination.delete()
+		}
+		def javaHome = System.getProperty('java.home')
+		def libraryJars = []
+		def jmods = file("${javaHome}/jmods")
+		if (jmods.directory) {
+			jmods.listFiles().each { File jmod ->
+				if (jmod.name.endsWith('.jmod')) {
+					libraryJars << "${jmod.absolutePath}(!**.jar;!module-info.class)"
+				}
+			}
+		} else {
+			libraryJars << "${javaHome}/lib/rt.jar"
+		}
+		args = [
+			'@' + confFile.asFile.absolutePath,
+			'-injars', inJar.get().asFile.absolutePath,
+			'-outjars', destination.absolutePath
+		]
+		libraryJars.each { path ->
+			args '-libraryjars', path
+		}
+	}
 }
